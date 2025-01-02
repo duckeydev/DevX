@@ -1,0 +1,6 @@
+/* 
+ Vue is supported on v2 is so weird
+*/
+@tailwind base;
+@tailwind utilities;
+@tailwind components;

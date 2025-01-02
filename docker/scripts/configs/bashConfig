@@ -1,0 +1,85 @@
+# ~/.bashrc: executed by bash(1) for non-login shells.
+
+[ -z "$PS1" ] && return
+
+HISTCONTROL=ignoredups:ignorespace
+shopt -s histappend
+HISTSIZE=1000
+HISTFILESIZE=2000
+shopt -s checkwinsize
+
+[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+
+if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+case "$TERM" in
+    xterm-color) color_prompt=yes;;
+esac
+
+if [ -n "$force_color_prompt" ] || ( [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null ); then
+    color_prompt=yes
+fi
+
+if [ "$color_prompt" = yes ]; then
+    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+else
+    PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
+fi
+unset color_prompt force_color_prompt
+
+case "$TERM" in
+    xterm*|rxvt*)
+        PS1="\[\e]0;\u@\h: \w\a\]$PS1"
+    ;;
+esac
+
+if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+    alias ls='ls --color=auto'
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
+fi
+
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
+
+if [ -f ~/.bash_aliases ]; then
+    . ~/.bash_aliases
+fi
+
+# Custom Bash Prompt with Git Status
+__bash_prompt() {
+    local EXIT=$?
+    local userpart="\[\033[0;32m\]\u@\h"
+    local gitbranch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
+    
+    if [ -n "$gitbranch" ]; then
+        local git_status=""
+        if ! git diff --quiet 2>/dev/null; then
+            git_status=" \[\033[1;33m\]✗"
+        fi
+        gitbranch=" \[\033[0;36m\](\[\033[1;31m\]$gitbranch$git_status\[\033[0;36m\])"
+    fi
+    
+    local prompt_symbol="\[\033[0m\]➜"
+    [ $EXIT -ne 0 ] && prompt_symbol="\[\033[1;31m\]➜"
+    
+    PS1="${userpart} \[\033[1;34m\]\w${gitbranch} ${prompt_symbol} "
+}
+PROMPT_COMMAND=__bash_prompt
+
+# Terminal Title (like zsh preexec)
+if [[ "$TERM" == "xterm" ]]; then
+    preexec() {
+        echo -ne "\033]0;${USER}@${HOSTNAME}: ${BASH_COMMAND}\007"
+    }
+    precmd() {
+        echo -ne "\033]0;${USER}@${HOSTNAME}: bash\007"
+    }
+    trap 'preexec' DEBUG
+    PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND; }precmd"
+fi
